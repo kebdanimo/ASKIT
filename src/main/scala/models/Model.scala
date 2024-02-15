@@ -8,6 +8,11 @@ import org.mongodb.scala.result.UpdateResult
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 import org.mongodb.scala.bson.ObjectId
+import org.mongodb.scala.model.Updates
+import scala.concurrent.Future
+import scala.concurrent.Await
+import org.mongodb.scala.model.Filters._
+
 
 object Model {
 
@@ -43,6 +48,31 @@ object Model {
     val result: Future[Option[Document]] = collection.find(Document("post_id" -> id)).headOption()
     Await.result(result, Duration.Inf)
   }
+
+  // Retrieve a specific user document from MongoDB based on its unique identifier
+  def getDocumentByUser(user: String): Option[Document] = {
+    val result: Future[Option[Document]] = collection.find(Document("user" -> user)).headOption()
+    Await.result(result, Duration.Inf)
+  }
+
+  // Insert a new answer into the answers array of a specific document
+  def insertAnswer(postId: String, answer: Document): UpdateResult = {
+    val filter = equal("post_id", postId)
+    val update = Updates.push("answers", answer)
+    val result: Future[UpdateResult] = collection.updateOne(filter, update).toFuture()
+    Await.result(result, Duration.Inf)
+  }
+
+  // Update the upvotes of a specific answer in the answers array of a document
+  def updateAnswerUpvotes(postId: String, answerId: String, newUpvotes: Int): UpdateResult = {
+    val filter = and(equal("post_id", postId), equal("answers.answer_id", answerId))
+    val update = Updates.set("answers.$.upvotes", newUpvotes.toString)
+    val result: Future[UpdateResult] = collection.updateOne(filter, update).toFuture()
+    Await.result(result, Duration.Inf)
+  }
+
+
+
 
 
 }

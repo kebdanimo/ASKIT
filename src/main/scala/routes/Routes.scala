@@ -11,6 +11,9 @@ import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.Directives._
 import models.Model
+import org.mongodb.scala.result.UpdateResult
+
+
 
 object Routes {
 
@@ -55,9 +58,48 @@ object Routes {
       }
     }
 
+  // Define your new route
+
+  val historyRoute: Route =
+    path("history" / Segment) { id =>
+      get {
+        // Retrieve the document by its ID
+        val maybeDocument: Option[Document] = Model.getDocumentByUser(id)
+        maybeDocument match {
+          case Some(document) => complete(StatusCodes.OK, document.toJson())
+          case None => complete(StatusCodes.NotFound, s"Document with ID $id not found")
+        }
+      }
+    }
+
+  // Define your new route for inserting answers
+  val insertAnswerRoute: Route =
+    path("insert-answer" / Segment) { postId =>
+      post {
+        entity(as[String]) { jsonString =>
+          val answer = Document(jsonString)
+          Model.insertAnswer(postId, answer)
+          complete(StatusCodes.Created, "Answer inserted successfully")
+        }
+      }
+    }
+
+  val updateUpvotesRoute: Route =
+    path("updateUpvotes" / Segment / Segment / IntNumber) { (postId, answerId, newUpvotes) =>
+      post {
+        // Update the upvotes of the specified answer
+        val result: UpdateResult = Model.updateAnswerUpvotes(postId, answerId, newUpvotes)
+        if (result.wasAcknowledged()) {
+          complete(StatusCodes.OK, s"Upvotes for answer $answerId updated successfully")
+        } else {
+          complete(StatusCodes.InternalServerError, "Failed to update upvotes")
+        }
+      }
+    }
+
   // Enable CORS for all routes
   val corsRoutes = cors(corsSettings) {
-    routes ~ newRoute ~ targetRoute
+    routes ~ newRoute ~ targetRoute ~ historyRoute ~ insertAnswerRoute ~ updateUpvotesRoute
   }
   // OPTIONS route for handling preflight requests
   val optionsRoute = options {
