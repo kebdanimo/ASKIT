@@ -9,6 +9,9 @@ object Controller {
   def getAllData(): Seq[Document] = Model.getAllDocuments()
 
   // Insert a new document into MongoDB
-  def insertData(document: Document): Unit = Model.insertDocument(document)
+  def insertData(document: Document): Unit = Model.insertNewQst(document)
+
+  // get all tags
+  def getAllTags(): Seq[Document] = Model.getAllTags()
 
 }

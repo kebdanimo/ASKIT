@@ -10,6 +10,7 @@ import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import akka.http.scaladsl.model.HttpMethods._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.server.Directives._
+import models.Model
 
 object Routes {
 
@@ -31,25 +32,37 @@ object Routes {
           }
         }
     }
-
   // Define your new route
   val newRoute: Route =
     path("new") {
       get {
         // Your GET request handling logic goes here
-        complete(StatusCodes.OK, "This is a GET request to the /new endpoint")
+        val documents: Seq[Document] = Controller.getAllTags()
+        complete(StatusCodes.OK, documents.map(_.toJson()).mkString("[", ",", "]"))
+      }
+    }
+
+  // Define your new route
+  val targetRoute: Route =
+    path("document" / Segment) { id =>
+      get {
+        // Retrieve the document by its ID
+        val maybeDocument: Option[Document] = Model.getDocumentById(id)
+        maybeDocument match {
+          case Some(document) => complete(StatusCodes.OK, document.toJson())
+          case None => complete(StatusCodes.NotFound, s"Document with ID $id not found")
+        }
       }
     }
 
   // Enable CORS for all routes
   val corsRoutes = cors(corsSettings) {
-    routes ~ newRoute
+    routes ~ newRoute ~ targetRoute
   }
   // OPTIONS route for handling preflight requests
   val optionsRoute = options {
     complete(StatusCodes.OK)
   }
-
   // Combine all routes including OPTIONS route
   val allRoutes = cors(corsSettings) {
     optionsRoute ~ corsRoutes
